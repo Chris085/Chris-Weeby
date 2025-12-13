@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- NOTE: This CSP is permissive; tighten later once stable -->
+    <!-- NOTE: Permissive CSP for now -->
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval';"
@@ -20,7 +20,7 @@
       rel="stylesheet"
     />
 
-    <!-- TEMP: Tailwind CDN (move to PostCSS for production) -->
+    <!-- TEMP: Tailwind CDN (works, but migrate later) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -42,7 +42,8 @@
               },
             },
             animation: {
-              "pulse-slow": "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+              "pulse-slow":
+                "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
             },
           },
         },
@@ -55,7 +56,6 @@
         color: #e2e8f0;
         overflow-x: hidden;
       }
-      /* Custom Scrollbar */
       ::-webkit-scrollbar {
         width: 8px;
       }
@@ -75,7 +75,7 @@
   <body>
     <div id="root"></div>
 
-    <!-- IMPORTANT: Vite entrypoint (this boots your React app) -->
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- 🔴 THIS IS THE FIX -->
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>

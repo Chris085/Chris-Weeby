@@ -3,9 +3,12 @@ import { createClient } from '@supabase/supabase-js';
 // DEV ONLY fallback (remove before production)
 import { SUPABASE_TEMP_CONFIG } from './supabaseConfig.temp';
 
+// Prefer Vite's import.meta.env when available, otherwise read process.env (for Node/SSR)
 const env =
   typeof import.meta !== 'undefined'
     ? (import.meta as any).env
+    : typeof process !== 'undefined'
+    ? (process.env as any)
     : undefined;
 
 const SUPABASE_URL =

@@ -47,13 +47,13 @@ export interface Inquiry {
 }
 
 export interface AboutContent {
-  id: number;
+  id?: number;
   created_at?: string;
   updated_at?: string;
   experience_title: string;
   experience_body: string;
   experience_bullets: string[];
-  experience_image_url?: string;
-  experience_image_alt?: string;
+  experience_image_url: string | null;
+  experience_image_alt: string | null;
   is_active: boolean;
 }

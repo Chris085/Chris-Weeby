@@ -126,7 +126,7 @@ export const Home: React.FC = () => {
               Purpose-built operational apps that fit your workflow.
             </Heading>
             <Text className="mb-6">
-              I don't just "digitise" data. I observe how your team works and build tools that make their job easier, not harder.
+              I don't just "digitize" data. I observe how your team works and build tools that make their job easier, not harder.
             </Text>
             
             <ul className="space-y-4 mb-8">

@@ -74,15 +74,15 @@ export const WhatIDo: React.FC = () => {
              <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 rounded bg-white/5 border border-white/5">
                    <span className="text-slate-300">Frontend</span>
-                   <span className="text-white font-medium">Mobile-First (AppSheet)</span>
+                   <span className="text-white font-medium">Mobile-First (AppSheet/React)</span>
                 </div>
                 <div className="flex items-center justify-between p-4 rounded bg-white/5 border border-white/5">
                    <span className="text-slate-300">Database</span>
-                   <span className="text-white font-medium">Google Sheets / SharePoint</span>
+                   <span className="text-white font-medium">Google Sheets / SQL</span>
                 </div>
                 <div className="flex items-center justify-between p-4 rounded bg-white/5 border border-white/5">
                    <span className="text-slate-300">Automation</span>
-                   <span className="text-white font-medium">Webhooks & AppSheet</span>
+                   <span className="text-white font-medium">Webhooks & API Integrations</span>
                 </div>
              </div>
           </div>

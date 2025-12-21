@@ -27,6 +27,8 @@ const Footer = () => (
       <div className="mt-4 flex justify-center gap-6 text-sm text-slate-600 items-center">
         <span>London, UK</span>
         <span>•</span>
+        <a href="mailto:hello@chrisjeal.com" className="hover:text-primary transition-colors">hello@chrisjeal.com</a>
+        <span>•</span>
         <Link to="/admin" className="hover:text-slate-400 transition-colors">Admin</Link>
       </div>
     </div>

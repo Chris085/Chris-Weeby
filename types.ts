@@ -45,3 +45,15 @@ export interface Inquiry {
   problem: string;
   file_url?: string;
 }
+
+export interface AboutContent {
+  id: number;
+  created_at?: string;
+  updated_at?: string;
+  experience_title: string;
+  experience_body: string;
+  experience_bullets: string[];
+  experience_image_url?: string;
+  experience_image_alt?: string;
+  is_active: boolean;
+}

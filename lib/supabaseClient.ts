@@ -9,8 +9,8 @@ import { createClient } from '@supabase/supabase-js';
  * 2. Ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in your environment.
  */
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://jspcbpezwyubmcbcauvw.supabase.co'; 
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_8RjXlHA7cpTFL2pQv4o7Hw_QHDum3Al';
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL; 
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.warn(

@@ -5,7 +5,7 @@ import { SUPABASE_TEMP_CONFIG } from './supabaseConfig.temp';
 
 // Prefer Vite's import.meta.env when available, otherwise read process.env (for Node/SSR)
 const env =
-  typeof import.meta !== 'undefined'
+  typeof (import.meta as any) !== 'undefined'
     ? (import.meta as any).env
     : typeof process !== 'undefined'
     ? (process.env as any)
@@ -20,7 +20,7 @@ const SUPABASE_ANON_KEY =
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   throw new Error(
     'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY ' +
-    'or provide src/supabaseConfig.temp.ts for development.'
+    'or provide lib/supabaseConfig.temp.ts for development.'
   );
 }
 

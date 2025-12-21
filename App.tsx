@@ -25,9 +25,7 @@ const Footer = () => (
         &copy; {new Date().getFullYear()} Chris Jeal. All rights reserved.
       </div>
       <div className="mt-4 flex justify-center gap-6 text-sm text-slate-600 items-center">
-        <span>London, UK</span>
-        <span>•</span>
-        <a href="mailto:hello@chrisjeal.com" className="hover:text-primary transition-colors">hello@chrisjeal.com</a>
+        <span>Chorley, UK</span>
         <span>•</span>
         <Link to="/admin" className="hover:text-slate-400 transition-colors">Admin</Link>
       </div>

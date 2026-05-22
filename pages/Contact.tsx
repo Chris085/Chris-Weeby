@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { Section, Heading, Text, GlassCard, Button } from '../components/UiKit';
 import { Send, CheckCircle, Upload, FileSpreadsheet, X, AlertCircle } from 'lucide-react';
-import { supabase } from '../lib/supabaseClient';
+import { db, storage } from '../lib/firebaseClient';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export const Contact: React.FC = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -40,34 +42,25 @@ export const Contact: React.FC = () => {
       if (file) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `${fileName}`;
+        const filePath = `inquiries/${fileName}`;
+        const fileRef = ref(storage, filePath);
 
-        const { error: uploadError } = await supabase.storage
-          .from('spreadsheets')
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-
-        // Get public URL (assuming bucket is public, otherwise use createSignedUrl in admin)
-        const { data } = supabase.storage.from('spreadsheets').getPublicUrl(filePath);
-        fileUrl = data.publicUrl;
+        await uploadBytes(fileRef, file);
+        fileUrl = await getDownloadURL(fileRef);
       }
 
-      // 2. Insert Data
-      const { error: insertError } = await supabase
-        .from('inquiries')
-        .insert([
-          { 
-            name, 
-            email, 
-            problem, 
-            file_url: fileUrl 
-          }
-        ]);
-
-      if (insertError) throw insertError;
+      // 2. Add Data to Firestore
+      await addDoc(collection(db, 'inquiries'), {
+        name,
+        email,
+        problem,
+        file_url: fileUrl,
+        created_at: serverTimestamp(),
+      });
 
       setIsSubmitted(true);
+      form.reset();
+      setFile(null);
     } catch (error) {
       console.error('Error submitting form:', error);
       setErrorMessage('Something went wrong. Please try again later.');
@@ -113,7 +106,7 @@ export const Contact: React.FC = () => {
                   type="text" 
                   id="name"
                   name="name"
-                  className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-slate-600"
+                  className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
                   placeholder="Jane Doe"
                 />
               </div>
@@ -124,7 +117,7 @@ export const Contact: React.FC = () => {
                   type="email" 
                   id="email"
                   name="email"
-                  className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-slate-600"
+                  className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
                   placeholder="jane@company.com"
                 />
               </div>
@@ -137,7 +130,7 @@ export const Contact: React.FC = () => {
                 id="problem"
                 name="problem"
                 rows={4}
-                className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-slate-600"
+                className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
                 placeholder="e.g. 'Our daily vehicle check is a messy Excel sheet that no one updates on time...'"
               />
             </div>

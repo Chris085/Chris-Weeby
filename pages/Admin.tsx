@@ -1,14 +1,16 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { Section, Heading, Text, GlassCard, Button } from '../components/UiKit';
-import { supabase } from '../lib/supabaseClient';
-import { Inquiry, AboutContent } from '../types';
-// Fixed: Added Image to the lucide-react imports
+import { auth, db, storage } from '../lib/firebaseClient';
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { collection, query, orderBy, onSnapshot, deleteDoc, doc, setDoc, getDocs, where } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Download, LogOut, Loader2, FileSpreadsheet, Mail, AlertCircle, Trash2, Edit3, Save, Upload, CheckCircle2, LayoutDashboard, UserCircle, Image } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Inquiry, AboutContent } from '../types';
 
 export const Admin: React.FC = () => {
-  const [session, setSession] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -31,25 +33,16 @@ export const Admin: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
         loadDashboardData();
       } else {
         setLoading(false);
       }
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) {
-        loadDashboardData();
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   const loadDashboardData = async () => {
@@ -59,30 +52,32 @@ export const Admin: React.FC = () => {
   };
 
   const fetchInquiries = async () => {
-    const { data, error } = await supabase
-      .from('inquiries')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) console.error('Error fetching inquiries:', error);
-    else setInquiries(data as Inquiry[]);
+    try {
+      const q = query(collection(db, 'inquiries'), orderBy('created_at', 'desc'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id as any,
+          ...doc.data(),
+        })) as Inquiry[];
+        setInquiries(data);
+      });
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error fetching inquiries:', error);
+    }
   };
 
   const fetchAboutContent = async () => {
     try {
-      const { data, error } = await supabase
-        .from('about_content')
-        .select('*')
-        .eq('is_active', true)
-        .order('id', { ascending: true })
-        .limit(1)
-        .single();
-
-      if (data) {
+      const q = query(collection(db, 'about_content'), where('is_active', '==', true));
+      const snapshot = await getDocs(q);
+      
+      if (!snapshot.empty) {
+        const data = snapshot.docs[0].data() as AboutContent;
         setAboutContent(data);
         setTitle(data.experience_title);
         setBody(data.experience_body);
-        setBullets(data.experience_bullets.join('\n'));
+        setBullets(Array.isArray(data.experience_bullets) ? data.experience_bullets.join('\n') : '');
         setImageUrl(data.experience_image_url);
         setImageAlt(data.experience_image_alt || '');
       }
@@ -97,11 +92,7 @@ export const Admin: React.FC = () => {
     setAuthMessage(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw error;
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
       setAuthMessage({ type: 'error', text: error.message || 'Authentication failed' });
     } finally {
@@ -110,7 +101,7 @@ export const Admin: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut(auth);
     navigate('/');
   };
 
@@ -122,16 +113,12 @@ export const Admin: React.FC = () => {
     const fileExt = file.name.split('.').pop();
     const fileName = `experience_${Date.now()}.${fileExt}`;
     const filePath = `about/${fileName}`;
+    const fileRef = ref(storage, filePath);
 
     try {
-      const { error: uploadError } = await supabase.storage
-        .from('site-assets')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from('site-assets').getPublicUrl(filePath);
-      setImageUrl(data.publicUrl);
+      await uploadBytes(fileRef, file);
+      const downloadURL = await getDownloadURL(fileRef);
+      setImageUrl(downloadURL);
       setAuthMessage({ type: 'success', text: 'Image uploaded successfully' });
     } catch (error: any) {
       setAuthMessage({ type: 'error', text: `Upload failed: ${error.message}` });
@@ -156,14 +143,16 @@ export const Admin: React.FC = () => {
     };
 
     try {
-      const { error } = await supabase
-        .from('about_content')
-        .upsert({ 
-          id: aboutContent?.id || undefined, 
-          ...payload 
+      if (aboutContent?.id) {
+        // Update existing
+        await setDoc(doc(db, 'about_content', aboutContent.id as string), payload, { merge: true });
+      } else {
+        // Create new
+        await setDoc(doc(db, 'about_content'), {
+          ...payload,
+          created_at: new Date().toISOString(),
         });
-
-      if (error) throw error;
+      }
       setAuthMessage({ type: 'success', text: 'About page updated successfully!' });
       fetchAboutContent();
     } catch (error: any) {
@@ -173,15 +162,9 @@ export const Admin: React.FC = () => {
     }
   };
 
-  const executeDelete = async (id: number) => {
+  const executeDelete = async (id: string | number) => {
     try {
-      const { error } = await supabase
-        .from('inquiries')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await deleteDoc(doc(db, 'inquiries', id as string));
       setInquiries((prev) => prev.filter((item) => item.id !== id));
       setDeleteId(null);
     } catch (error: any) {
@@ -189,7 +172,7 @@ export const Admin: React.FC = () => {
     }
   };
 
-  if (!session) {
+  if (!user) {
     return (
       <Section className="min-h-screen flex flex-col items-center justify-center">
         <GlassCard className="max-w-md w-full p-8">
@@ -253,7 +236,7 @@ export const Admin: React.FC = () => {
            <div className="bg-white/5 p-1 rounded-lg flex gap-1">
               <button 
                 onClick={() => setActiveTab('inquiries')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'inquiries' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'inquiries' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-white'}`}
               >
                 <Mail size={16} /> Inquiries
                 <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === 'inquiries' ? 'bg-white/20' : 'bg-white/10'}`}>
@@ -262,14 +245,14 @@ export const Admin: React.FC = () => {
               </button>
               <button 
                 onClick={() => setActiveTab('about')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'about' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'about' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-white'}`}
               >
                 <UserCircle size={16} /> Edit About
               </button>
            </div>
            <Button variant="outline" size="sm" onClick={handleLogout} icon={<LogOut size={16} />}>
-            Sign Out
-          </Button>
+             Sign Out
+           </Button>
         </div>
       </div>
 
@@ -328,7 +311,7 @@ export const Admin: React.FC = () => {
                          <button onClick={() => setDeleteId(null)} className="flex-1 p-3 rounded-lg text-slate-400 hover:text-white transition-all text-sm font-medium">Cancel</button>
                       </div>
                     ) : (
-                      <button onClick={() => setDeleteId(inquiry.id)} className="flex items-center justify-center gap-2 p-3 rounded-xl border border-white/10 text-slate-500 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/5 transition-all text-sm w-full font-medium">
+                      <button onClick={() => setDeleteId(inquiry.id)} className="flex items-center justify-center gap-2 p-3 rounded-xl border border-white/10 text-slate-500 hover:text-red-400 hover:border-red-500/30 transition-all">
                           <Trash2 size={16} /> Remove Record
                       </button>
                     )}
@@ -431,7 +414,6 @@ export const Admin: React.FC = () => {
                           </div>
                        ) : (
                           <div className="aspect-[4/3] rounded-xl border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-slate-700">
-                             {/* Fixed: Replaced ImageIcon with Image component */}
                              <Image size={40} className="mb-2" />
                              <Text size="sm">No image uploaded</Text>
                           </div>

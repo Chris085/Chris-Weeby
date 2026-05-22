@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Section, Heading, Text, GlassCard } from '../components/UiKit';
 import { CheckCircle2, Loader2 } from 'lucide-react';
-import { supabase } from '../lib/supabaseClient';
+import { db } from '../lib/firebaseClient';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { AboutContent } from '../types';
 
 export const About: React.FC = () => {
@@ -11,15 +12,11 @@ export const About: React.FC = () => {
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const { data, error } = await supabase
-          .from('about_content')
-          .select('*')
-          .eq('is_active', true)
-          .order('id', { ascending: true })
-          .limit(1)
-          .single();
-
-        if (data) {
+        const q = query(collection(db, 'about_content'), where('is_active', '==', true));
+        const snapshot = await getDocs(q);
+        
+        if (!snapshot.empty) {
+          const data = snapshot.docs[0].data() as AboutContent;
           setContent(data);
         }
       } catch (err) {

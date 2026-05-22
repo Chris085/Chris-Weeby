@@ -15,7 +15,7 @@
     "lucide-react": "^0.561.0",
     "framer-motion": "^12.23.26",
     "recharts": "^3.5.1",
-    "@supabase/supabase-js": "2",
+    "firebase": "^11.0.0",
     "vite": "^7.2.7",
     "@vitejs/plugin-react": "^5.1.2"
   },
